@@ -1,0 +1,227 @@
+import textwrap
+from os import makedirs
+from os.path import join
+
+configfile : "config.yaml"
+
+rule all:
+    input:
+        expand(
+            join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}.txt",
+                tools = ["PyTom", "STOPGAP", "Ours"],
+                cores = configfile["NCORES"]
+            )
+        )
+        expand(
+            join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}.txt",
+                tools = ["Situs", "Powerfit", "Ours"],
+                cores = configfile["NCORES"]
+            )
+        )
+def make_jobxml(target : str, template : str, template_mask : str,
+    outdir : str, angles : str = "angles_90_2.em") -> str:
+    return textwrap.dedent(f"""\
+        <JobDescription Destination="{outdir}" ID="0" Members="1">
+                <Volume Sampling="[0, 0, 0]" Subregion="[0, 0, 0, 0, 0, 0]" Binning="[0, 0, 0]" Filename="{target}"/>
+          <Reference PreWedge="" File="{template}" Weighting="">
+          </Reference>
+          <Mask Filename="{template_mask}" Binning="1" isSphere="True"/>
+          <SingleTiltWedge Smooth="0.0" Angle1="30" CutoffRadius="0.0" Angle2="30">
+            <TiltAxisRotation Z1="0.0" Z2="0.0" X="0.0"/>
+          </SingleTiltWedge>
+          <Angles Type="FromEMFile" File="{angles}"/>
+          <Score Type="FLCFScore" Value="-10000000000.0">
+            <PeakPrior Smooth="-1.0" Radius="0.0" Filename=""/>
+          </Score>
+          <BandPassFilter LowestFrequency="3.0" Smooth="0.0" HighestFrequency="15.0"/>
+        </JobDescription>
+    """)
+
+for ncore in configfile["NCORES"]:
+    pytom_dir = makedirs(join(config["OUTPUT_PATH"], "PyTom", ncore))
+    xml = make_jobxml(
+        target = data["TOMOGRAM_PATH"],
+        template = data["TOMOGRAM_TEMPLATE"],
+        template_mask = data["TOMOGRAM_TEMPLATE_MASK"],
+        outdir = pytom_dir,
+        angles = "angles_90_2.em"
+    )
+    with open(join(pytom_dir, "TM_job.xml")) as ofile:
+        ofile.write(xml)
+
+# Tomography template matching
+rule PyTom:
+    input:
+        target = config["TOMOGRAM_PATH"],
+        template = config["TEMPLATE_PATH"],
+    output:
+        join(config["OUTPUT_PATH"], "PyTom", "tomogram_{ncores}.txt")
+    container:
+       "docker://dquz/pytom:latest"
+    resources:
+        avg_mem  = lambda wildcards, attempt: 100 * attempt,
+        mem_mb   = lambda wildcards, attempt: 150 * attempt,
+        walltime = lambda wildcards, attempt: 10 * attempt,
+        attempt  = lambda wildcards, attempt: attempt,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        ncores = "{ncores}"
+        tm_config = join(config["OUTPUT_PATH"], "PyTom", "{ncores}", "TM_job.xml")
+    shell:"""
+        module load PyTom/1.0b-foss-2021a-CUDA-11.3.1
+        /usr/bin/time -v mpirun \
+            -n {params.ncores} \
+            ` which localization.py ` \
+            -j {params.tm_config}
+        """
+
+rule STOPGAP:
+    input:
+        target = config["TOMOGRAM_PATH"],
+        template = config["TEMPLATE_PATH"],
+    output:
+        join(config["OUTPUT_PATH"], "STOPGAP", "tomogram_{ncores}.txt")
+    # Thank you for matlab
+    # container:
+       # "docker://dquz/tm_benchmark:latest"
+    resources:
+        avg_mem  = lambda wildcards, attempt: 100 * attempt,
+        mem_mb   = lambda wildcards, attempt: 150 * attempt,
+        walltime = lambda wildcards, attempt: 10 * attempt,
+        attempt  = lambda wildcards, attempt: attempt,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        ncores = "{ncores}",
+        rootdir = config["STOPGAP_ROOTDIR"]
+    shell:"""
+        module load STOPGAP/0.7.1-foss-2020b-MCR-R2016b
+
+        export STOPGAPHOME="/home/vmaurer/src/STOPGAP/exec"
+        subtomo="${STOPGAPHOME}/bin/stopgap_mpi_slurm.sh"
+        cp tm_params.star tm_param{params.ncores}.star
+        cd ${params.rootdir}
+
+        /usr/bin/time -v mpiexec \
+            -np ${params.ncores} \
+            ${subtomo} \
+            ${params.rootdir} \
+            tm_param{params.ncores}.star \
+            ${params.ncores}  2> {output}
+        """
+
+rule ourTomo:
+    input:
+        target = config["TOMOGRAM_PATH"],
+        template = config["TEMPLATE_PATH"],
+    output:
+        join(config["OUTPUT_PATH"], "Ours", "tomogram_{ncores}.txt")
+    container:
+       "docker://dquz/template_matching:latest"
+    resources:
+        avg_mem  = lambda wildcards, attempt: 100 * attempt,
+        mem_mb   = lambda wildcards, attempt: 150 * attempt,
+        walltime = lambda wildcards, attempt: 10 * attempt,
+        attempt  = lambda wildcards, attempt: attempt,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        ncores = "{ncores}"
+    shell:"""
+        /usr/bin/time -v fit_tomo.py \
+            -m {input.target} \
+            -i {input.template} \
+            -s CORR \
+            -n {params.ncores} \
+            -a {params.angular_sampling} 2> {output}
+        """
+
+# Fitting
+rule Situs:
+    input:
+        target = config["MAP_PATH"],
+        template = config["MAP_TEMPLATE"],
+    output:
+        join(config["OUTPUT_PATH"], "Situs", "fitting_{ncores}.txt")
+    container:
+       "docker://dquz/template_matching:latest"
+    resources:
+        avg_mem  = lambda wildcards, attempt: 100 * attempt,
+        mem_mb   = lambda wildcards, attempt: 150 * attempt,
+        walltime = lambda wildcards, attempt: 10 * attempt,
+        attempt  = lambda wildcards, attempt: attempt,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        ncores = "{ncores}"
+    shell:"""
+        /usr/bin/time -v colores {args.target} {args.template} \
+            -res {params.map_resolution} \
+            -cutoff {params.map_cutoff} \
+            -deg {params.angular_sampling} \
+            -nprocs {params.ncores} 2> {output}
+        """
+
+rule Powerfit:
+    input:
+        target = config["MAP_PATH"],
+        template = config["MAP_TEMPLATE"],
+    output:
+        join(config["OUTPUT_PATH"], "Powerfit", "fitting_{ncores}.txt")
+    container:
+       "docker://dquz/powerfit:latest"
+    resources:
+        avg_mem  = lambda wildcards, attempt: 100 * attempt,
+        mem_mb   = lambda wildcards, attempt: 150 * attempt,
+        walltime = lambda wildcards, attempt: 10 * attempt,
+        attempt  = lambda wildcards, attempt: attempt,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        ncores = "{ncores}"
+    shell:"""
+        /usr/bin/time -v powerfit {input.target} {params.map_resolution} \
+            {input.template} \
+            -a {params.angular_sampling} \
+            -p {params.ncores} 2> {output}
+        """
+
+rule our:
+    input:
+        target = config["MAP_PATH"],
+        template = config["MAP_TEMPLATE"],
+    output:
+        join(config["OUTPUT_PATH"], "Ours", "fitting_{ncores}.txt")
+    container:
+       "docker://dquz/template_matching:latest"
+    resources:
+        avg_mem  = lambda wildcards, attempt: 100 * attempt,
+        mem_mb   = lambda wildcards, attempt: 150 * attempt,
+        walltime = lambda wildcards, attempt: 10 * attempt,
+        attempt  = lambda wildcards, attempt: attempt,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        ncores = "{ncores}"
+    shell:"""
+        /usr/bin/time -v fit.py \
+            -m {input.target} \
+            -i {input.template} \
+            -c {params.map_cutoff} \
+            -s CORR \
+            -n {params.ncores} \
+            -a {params.angular_sampling} 2> {output}
+        """

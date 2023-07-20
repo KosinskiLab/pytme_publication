@@ -1,0 +1,11 @@
+NCORES: [1,2,4,8,16,32,64,128]
+OUTPUT_PATH: "../benchmarks"
+ANGULAR_SAMPLING: 10
+TOMOGRAM_PATH: "/path/to/tomogram"
+TOMOGRAM_TEMPLATE: "/path/to/template"
+TOMOGRAM_TEMPLATE_MASK: "/path/to/template"
+STOPGAP_ROOTDIR: "/path/to/template"
+MAP_PATH: "/path/to/tomogram"
+MAP_TEMPLATE: "/path/to/tomogram"
+MAP_CUTOFF: 10
+MAP_RESOLUTION: 10
