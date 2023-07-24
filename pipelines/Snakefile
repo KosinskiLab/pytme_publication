@@ -7,17 +7,16 @@ configfile : "config.yaml"
 rule all:
     input:
         expand(
-            join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}.txt",
+            join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}.txt"),
                 tools = ["PyTom", "STOPGAP", "Ours"],
-                cores = configfile["NCORES"]
-            )
-        )
+                ncores = config["NCORES"]
+        ),
         expand(
-            join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}.txt",
+            join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}.txt"),
                 tools = ["Situs", "Powerfit", "Ours"],
-                cores = configfile["NCORES"]
-            )
-        )
+                ncores = config["NCORES"]
+        ),
+
 def make_jobxml(target : str, template : str, template_mask : str,
     outdir : str, angles : str = "angles_90_2.em") -> str:
     return textwrap.dedent(f"""\
@@ -37,23 +36,24 @@ def make_jobxml(target : str, template : str, template_mask : str,
         </JobDescription>
     """)
 
-for ncore in configfile["NCORES"]:
-    pytom_dir = makedirs(join(config["OUTPUT_PATH"], "PyTom", ncore))
+for ncore in config["NCORES"]:
+    pytom_dir = join(config["OUTPUT_PATH"], "PyTom", f"{ncore}")
+    makedirs(pytom_dir, exist_ok = True)
     xml = make_jobxml(
-        target = data["TOMOGRAM_PATH"],
-        template = data["TOMOGRAM_TEMPLATE"],
-        template_mask = data["TOMOGRAM_TEMPLATE_MASK"],
+        target = config["TOMOGRAM_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
+        template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
         outdir = pytom_dir,
         angles = "angles_90_2.em"
     )
-    with open(join(pytom_dir, "TM_job.xml")) as ofile:
+    with open(join(pytom_dir, "TM_job.xml"), "w", encoding = "utf-8") as ofile:
         ofile.write(xml)
 
 # Tomography template matching
 rule PyTom:
     input:
         target = config["TOMOGRAM_PATH"],
-        template = config["TEMPLATE_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "PyTom", "tomogram_{ncores}.txt")
     container:
@@ -67,9 +67,8 @@ rule PyTom:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        angular_sampling = config['ANGULAR_SAMPLING'],
-        ncores = "{ncores}"
-        tm_config = join(config["OUTPUT_PATH"], "PyTom", "{ncores}", "TM_job.xml")
+        ncores = "{ncores}",
+        tm_config = join(config["OUTPUT_PATH"], "PyTom", "{ncores}", "TM_job.xml"),
     shell:"""
         module load PyTom/1.0b-foss-2021a-CUDA-11.3.1
         /usr/bin/time -v mpirun \
@@ -81,7 +80,7 @@ rule PyTom:
 rule STOPGAP:
     input:
         target = config["TOMOGRAM_PATH"],
-        template = config["TEMPLATE_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "STOPGAP", "tomogram_{ncores}.txt")
     # Thank you for matlab
@@ -96,9 +95,8 @@ rule STOPGAP:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        angular_sampling = config['ANGULAR_SAMPLING'],
         ncores = "{ncores}",
-        rootdir = config["STOPGAP_ROOTDIR"]
+        rootdir = config["STOPGAP_ROOTDIR"],
     shell:"""
         module load STOPGAP/0.7.1-foss-2020b-MCR-R2016b
 
@@ -118,7 +116,7 @@ rule STOPGAP:
 rule ourTomo:
     input:
         target = config["TOMOGRAM_PATH"],
-        template = config["TEMPLATE_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "Ours", "tomogram_{ncores}.txt")
     container:
@@ -132,8 +130,7 @@ rule ourTomo:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        angular_sampling = config['ANGULAR_SAMPLING'],
-        ncores = "{ncores}"
+        ncores = "{ncores}",
     shell:"""
         /usr/bin/time -v fit_tomo.py \
             -m {input.target} \
@@ -161,8 +158,7 @@ rule Situs:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        angular_sampling = config['ANGULAR_SAMPLING'],
-        ncores = "{ncores}"
+        ncores = "{ncores}",
     shell:"""
         /usr/bin/time -v colores {args.target} {args.template} \
             -res {params.map_resolution} \
@@ -188,7 +184,6 @@ rule Powerfit:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        angular_sampling = config['ANGULAR_SAMPLING'],
         ncores = "{ncores}"
     shell:"""
         /usr/bin/time -v powerfit {input.target} {params.map_resolution} \
@@ -214,7 +209,6 @@ rule our:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        angular_sampling = config['ANGULAR_SAMPLING'],
         ncores = "{ncores}"
     shell:"""
         /usr/bin/time -v fit.py \
