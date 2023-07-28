@@ -2,7 +2,15 @@
 
 PYTHON_VERSION=3.11
 SITUS_VERSION=3.1
-BUILD_PLATFORM=arm64
+
+PLATFORM=$(uname -m)
+
+if [ "$PLATFORM" == "x86_64" ]; then
+  BUILD_PLATFORM="linux/amd64"
+else
+  BUILD_PLATFORM="arm64"
+fi
+echo "BUILD_PLATFORM is set to $BUILD_PLATFORM"
 
 WORKDIR=$(pwd)
 cp -r $HOME/src/edm_simulation $WORKDIR/edm_simulation

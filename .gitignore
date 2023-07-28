@@ -66,5 +66,10 @@ Images
 *pdf
 *drawio
 *mrc
+*mrc.gz
 *pdb
 *cif
+
+*log*
+*err*
+submit_stopgap*

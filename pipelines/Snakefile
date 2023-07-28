@@ -2,20 +2,47 @@ import textwrap
 from os import makedirs
 from os.path import join
 
+from dge import Map
+from dge.fitter_utils import estimate_ram_usage
+
 configfile : "config.yaml"
 
 rule all:
     input:
-        expand(
-            join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}.txt"),
-                tools = ["PyTom", "STOPGAP", "Ours"],
-                ncores = config["NCORES"]
-        ),
+        # expand(
+        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}.txt"),
+        #         tools = ["PyTom", "STOPGAP", "Ours"],
+        #         ncores = config["NCORES"]
+        # ),
         expand(
             join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}.txt"),
                 tools = ["Situs", "Powerfit", "Ours"],
                 ncores = config["NCORES"]
         ),
+
+electron_density = Map.from_file(config["MAP_PATH"])
+structure_density = Map.from_structure(
+    config["MAP_TEMPLATE"],
+    origin = electron_density.origin,
+    sampling_rate = electron_density.sampling_rate,
+    shape = electron_density.box_size
+)
+FITTING_RAM = {str(int(cores)) : estimate_ram_usage(
+    electron_density.box_size, structure_density.box_size,
+    fitter = "CORR", ncores = cores) for cores in config["NCORES"]}
+
+def get_ram_fitting(wildcards, attempt):
+    value = FITTING_RAM[str(wildcards.ncores)]
+    value //= 1e6
+    if attempt <= 3:
+        ram_scaling = 1 + 0.1 ** (attempt - 1)
+    else:
+        ram_scaling = attempt
+    value *=  ram_scaling
+    return value
+
+def get_cores(wildcards):
+    return int(wildcards.ncores)
 
 def make_jobxml(target : str, template : str, template_mask : str,
     outdir : str, angles : str = "angles_90_2.em") -> str:
@@ -69,6 +96,8 @@ rule PyTom:
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
         tm_config = join(config["OUTPUT_PATH"], "PyTom", "{ncores}", "TM_job.xml"),
+        slurm_extra = "--signal=B:USR1@300"
+    threads : get_cores,
     shell:"""
         module load PyTom/1.0b-foss-2021a-CUDA-11.3.1
         /usr/bin/time -v mpirun \
@@ -97,6 +126,8 @@ rule STOPGAP:
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
         rootdir = config["STOPGAP_ROOTDIR"],
+        slurm_extra = "--signal=B:USR1@300"
+    threads : get_cores,
     shell:"""
         module load STOPGAP/0.7.1-foss-2020b-MCR-R2016b
 
@@ -131,6 +162,8 @@ rule ourTomo:
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
+        slurm_extra = "--signal=B:USR1@300"
+    threads : get_cores,
     shell:"""
         /usr/bin/time -v fit_tomo.py \
             -m {input.target} \
@@ -143,51 +176,71 @@ rule ourTomo:
 # Fitting
 rule Situs:
     input:
-        target = config["MAP_PATH"],
+        target = config["MAP_PATH_PADDED"],
         template = config["MAP_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "Situs", "fitting_{ncores}.txt")
     container:
        "docker://dquz/template_matching:latest"
     resources:
-        avg_mem  = lambda wildcards, attempt: 100 * attempt,
-        mem_mb   = lambda wildcards, attempt: 150 * attempt,
-        walltime = lambda wildcards, attempt: 10 * attempt,
+        avg_mem  = get_ram_fitting,
+        mem_mb   = get_ram_fitting,
+        walltime = lambda wildcards, attempt: 600 * attempt,
         attempt  = lambda wildcards, attempt: attempt,
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
+        slurm_extra = "--signal=B:USR1@300"
+    threads : get_cores,
     shell:"""
-        /usr/bin/time -v colores {args.target} {args.template} \
+        outdir=$(dirname {output})
+        tempdir=$outdir/{params.ncores}_fitting
+        mkdir -p $tempdir
+        cd $tempdir
+
+        #-cutoff {params.map_cutoff}
+        /usr/bin/time -v colores {input.target} {input.template} \
             -res {params.map_resolution} \
-            -cutoff {params.map_cutoff} \
+            -sizef 0 \
             -deg {params.angular_sampling} \
+            -nopowell \
             -nprocs {params.ncores} 2> {output}
         """
 
 rule Powerfit:
     input:
-        target = config["MAP_PATH"],
+        target = config["MAP_PATH_PADDED"],
         template = config["MAP_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "Powerfit", "fitting_{ncores}.txt")
     container:
        "docker://dquz/powerfit:latest"
     resources:
-        avg_mem  = lambda wildcards, attempt: 100 * attempt,
-        mem_mb   = lambda wildcards, attempt: 150 * attempt,
-        walltime = lambda wildcards, attempt: 10 * attempt,
+        avg_mem  = get_ram_fitting,
+        mem_mb   = get_ram_fitting,
+        walltime = lambda wildcards, attempt: 600 * attempt,
         attempt  = lambda wildcards, attempt: attempt,
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        ncores = "{ncores}"
+        ncores = "{ncores}",
+        slurm_extra = "--signal=B:USR1@300"
+    threads : get_cores,
     shell:"""
+        outdir=$(dirname {output})
+        tempdir=$outdir/{params.ncores}_fitting
+        mkdir -p $tempdir
+        cd $tempdir
+
+        # --trimming-cutoff {params.map_cutoff}
+
         /usr/bin/time -v powerfit {input.target} {params.map_resolution} \
             {input.template} \
+            --no-resampling \
+            --no-trimming \
             -a {params.angular_sampling} \
             -p {params.ncores} 2> {output}
         """
@@ -201,16 +254,22 @@ rule our:
     container:
        "docker://dquz/template_matching:latest"
     resources:
-        avg_mem  = lambda wildcards, attempt: 100 * attempt,
-        mem_mb   = lambda wildcards, attempt: 150 * attempt,
-        walltime = lambda wildcards, attempt: 10 * attempt,
+        avg_mem  = get_ram_fitting,
+        mem_mb   = get_ram_fitting,
+        walltime = lambda wildcards, attempt: 600 * attempt,
         attempt  = lambda wildcards, attempt: attempt,
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
-        ncores = "{ncores}"
+        ncores = "{ncores}",
+        slurm_extra = "--signal=B:USR1@300"
+    threads : get_cores,
     shell:"""
+        outdir=$(dirname {output})
+        tempdir=$outdir/{params.ncores}_fitting
+        mkdir -p $tempdir
+        cd $tempdir
         /usr/bin/time -v fit.py \
             -m {input.target} \
             -i {input.template} \

@@ -1,11 +1,12 @@
 NCORES: [1,2,4,8,16,32,64]
-OUTPUT_PATH: "../benchmarks"
+OUTPUT_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/benchmarks"
 ANGULAR_SAMPLING: 10
 TOMOGRAM_PATH: "/g/kosinski/vmaurer/ribosomePaper/targets/TS_037.mrc"
 TOMOGRAM_TEMPLATE: "/g/kosinski/vmaurer/ribosomePaper/templates/7p6z_10/template.mrc"
 TOMOGRAM_TEMPLATE_MASK: "/g/kosinski/vmaurer/ribosomePaper/templates/7p6z_10/templateMask.mrc"
 STOPGAP_ROOTDIR: "/g/kosinski/vmaurer/templateMatchingLibrary/templateMatchingLibrary/data/stopgapBase"
-MAP_PATH: "../data/emd_8621.mrc"
-MAP_TEMPLATE: "../data/5uz4.cif"
+MAP_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621.mrc"
+MAP_PATH_PADDED: "/g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621_padded.mrc"
+MAP_TEMPLATE: "/g/kosinski/vmaurer/templateMatchingLibrary/data/5uz4.cif"
 MAP_CUTOFF: 0.0309
 MAP_RESOLUTION: 5.8

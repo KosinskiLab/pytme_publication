@@ -1,28 +1,28 @@
 FROM ubuntu:18.04
 
 RUN apt-get update --fix-missing && \
-	apt-get install -y \
-		python2.7 \
-		python2.7-dev \
-		git \
-		wget \
-		gcc \
-		g++ \
-		libfftw3-dev \
-		libfftw3-doc \
-		libfreetype6-dev \
-		pkg-config \
-		libopenblas-dev \
-		gfortran \
-		python-scipy \
-		python-numpy \
-		time
+    apt-get install -y \
+        python2.7 \
+        python2.7-dev \
+        git \
+        wget \
+        gcc \
+        g++ \
+        libfftw3-dev \
+        libfftw3-doc \
+        libfreetype6-dev \
+        pkg-config \
+        libopenblas-dev \
+        gfortran \
+        python-scipy \
+        python-numpy \
+        time
 
 RUN wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && \
-	python2 get-pip.py && \
-	python2.7 -mpip install Cython==0.29.33 pyfftw==0.12.0 && \
-	mkdir /src && \
-	cd /src && \
-	git clone https://github.com/haddocking/powerfit && \
-	cd powerfit && \
-	python2 setup.py install
+    python2 get-pip.py && \
+    python2.7 -mpip install Cython==0.29.33 pyfftw==0.12.0 && \
+    mkdir /src && \
+    cd /src && \
+    git clone https://github.com/haddocking/powerfit && \
+    cd powerfit && \
+    python2 setup.py install
