@@ -1,10 +1,10 @@
 NCORES: [1,2,4,8,16,32,64]
 OUTPUT_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/benchmarks"
-ANGULAR_SAMPLING: 10
-TOMOGRAM_PATH: "/g/kosinski/vmaurer/ribosomePaper/targets/TS_037.mrc"
-TOMOGRAM_TEMPLATE: "/g/kosinski/vmaurer/ribosomePaper/templates/7p6z_10/template.mrc"
-TOMOGRAM_TEMPLATE_MASK: "/g/kosinski/vmaurer/ribosomePaper/templates/7p6z_10/templateMask.mrc"
-STOPGAP_ROOTDIR: "/g/kosinski/vmaurer/templateMatchingLibrary/templateMatchingLibrary/data/stopgapBase"
+ANGULAR_SAMPLING: 15
+TOMOGRAM_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/maps/002.rec"
+TOMOGRAM_TEMPLATE: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/tmpl/template.mrc"
+TOMOGRAM_TEMPLATE_MASK: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/masks/mask.mrc"
+STOPGAP_ROOTDIR: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase"
 MAP_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621.mrc"
 MAP_PATH_PADDED: "/g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621_padded.mrc"
 MAP_TEMPLATE: "/g/kosinski/vmaurer/templateMatchingLibrary/data/5uz4.cif"

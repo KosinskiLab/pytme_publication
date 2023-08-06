@@ -1,0 +1,56 @@
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+/opt/conda/envs/pytom_env/lib/python3.8/site-packages/mkl_fft/_numpy_fft.py:206: SyntaxWarning: "is" with a literal. Did you mean "=="?
+  elif norm is "forward":
+	Command being timed: "mpirun -np 16 localization.py -j /g/kosinski/vmaurer/templateMatchingLibrary/benchmarks/PyTom/16/TM_job.xml -x 1 -y 2 -z 2"
+	User time (seconds): 473791.84
+	System time (seconds): 18820.35
+	Percent of CPU this job got: 1585%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 8:37:41
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 5478092
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 3589
+	Minor (reclaiming a frame) page faults: 6018101146
+	Voluntary context switches: 395676
+	Involuntary context switches: 1012630
+	Swaps: 0
+	File system inputs: 10737032
+	File system outputs: 20053612
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+68088

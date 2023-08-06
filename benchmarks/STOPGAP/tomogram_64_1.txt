@@ -1,0 +1,24 @@
+	Command being timed: "mpiexec -np 64 /home/vmaurer/src/STOPGAP/exec/bin/stopgap_mpi_slurm.sh /g/kosinski/vmaurer/templateMatchingLibrary/benchmarks/STOPGAP/64_1_fitting/ tm_param.star 64"
+	User time (seconds): 2495619.07
+	System time (seconds): 58967.07
+	Percent of CPU this job got: 6173%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 11:29:40
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 5570132
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 7695
+	Minor (reclaiming a frame) page faults: 13034809518
+	Voluntary context switches: 58818243
+	Involuntary context switches: 53561054
+	Swaps: 0
+	File system inputs: 5944128
+	File system outputs: 9735456
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+83516

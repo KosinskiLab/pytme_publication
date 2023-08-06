@@ -17,8 +17,8 @@ param_name='tm_param.star'            # Name of the parameter .star file; if the
 
 # Folder options
 rootdir='/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/'
-
 # File options
+#tomolist_name='tomogram_list_15set.txt'                    # Plain-text list containg path and filename of tomograms
 tomolist_name='tomogram.txt'                    # Plain-text list containg path and filename of tomograms
 wedgelist_name='wedge_list.star'                 # Name of STOPGAP wedgelist
 tlist_name='template.star'                   # Template list
@@ -27,7 +27,7 @@ omap_name='angles'                    # Root name of orientation map. Final name
 tmap_name='tmap_flcf_noise1'                    # Root name of template map. Final name is [tmap_name]_[tomo_num].[vol_ext]. This is only written when more than one template used.
 
 # Binning
-binning=4
+binning=8
 
 # Bandpass filter parameters
 lp_rad=30                                   # Low-pass filter radius in Fourier pixels or approximate real space resolution. To calculate resolution: (pixelsize*boxsize)/pixels.

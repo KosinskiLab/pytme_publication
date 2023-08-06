@@ -26,9 +26,8 @@ job_id=311561
 special_add="-p ib --qos=normal"			# e.g. --qos=high
 
 ##### DIRECTORIES #####
-local_folder="$(pwd)/comm/"
-
-rootdir="$(pwd)/"    # Main subtomogram averaging directory
+rootdir='/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/comm/'
+rootdir='/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/'
 paramfilename='tm_param.star'          # Relative path to stopgap parameter file.
 
 
@@ -44,7 +43,7 @@ matlab_module="MATLAB/2016b.Update_7"
 #module load ${matlab_module}
 module load STOPGAP/0.7.1-foss-2020b-MCR-R2016b
 #export STOPGAPHOME=$scripts_path
-
+export STOPGAPHOME="/home/vmaurer/src/STOPGAP/exec"
 echo ${STOPGAPHOME}
 
 # Path to MATLAB executables

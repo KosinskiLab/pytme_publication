@@ -1,0 +1,23 @@
+	Command being timed: "colores /g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621_padded.mrc /g/kosinski/vmaurer/templateMatchingLibrary/data/5uz4.cif -res 5.8 -sizef 0 -deg 15 -nopowell -nprocs 16"
+	User time (seconds): 4652.43
+	System time (seconds): 4.36
+	Percent of CPU this job got: 1299%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 5:58.33
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1745564
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 21
+	Minor (reclaiming a frame) page faults: 53910
+	Voluntary context switches: 100422
+	Involuntary context switches: 16479
+	Swaps: 0
+	File system inputs: 298640
+	File system outputs: 458376
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

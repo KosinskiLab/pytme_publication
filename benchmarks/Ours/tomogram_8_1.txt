@@ -1,0 +1,24 @@
+	Command being timed: "match_template.py -m /g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/maps/002.rec -i /g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/tmpl/template.mrc -s CORR -n 8 -a 15"
+	User time (seconds): 33375.54
+	System time (seconds): 183.76
+	Percent of CPU this job got: 756%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:13:54
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 21862784
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 3230
+	Minor (reclaiming a frame) page faults: 19910580
+	Voluntary context switches: 1761781
+	Involuntary context switches: 991804
+	Swaps: 0
+	File system inputs: 4303144
+	File system outputs: 3480120
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+34276

@@ -1,0 +1,23 @@
+	Command being timed: "fit.py -m /g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621.mrc -i /g/kosinski/vmaurer/templateMatchingLibrary/data/5uz4.cif -c 0.0309 -s CORR -n 1 -a 15"
+	User time (seconds): 1846.97
+	System time (seconds): 2.13
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 31:07.71
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1651500
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 625
+	Minor (reclaiming a frame) page faults: 320090
+	Voluntary context switches: 49461
+	Involuntary context switches: 1646
+	Swaps: 0
+	File system inputs: 232344
+	File system outputs: 477416
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

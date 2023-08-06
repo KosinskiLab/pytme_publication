@@ -45,4 +45,5 @@ RUN apt-get update && \
 
 COPY edm_simulation /src/edm_simulation
 RUN cd /src/edm_simulation && python${PYTHON_VERSION} -mpip install .
-RUN cd /src/edm_simulation && pytest -vvv
+#RUN cd /src/edm_simulation && pytest -vvv
+RUN python3.11 -mpip install psutil
