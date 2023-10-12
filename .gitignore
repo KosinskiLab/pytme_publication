@@ -62,8 +62,6 @@ Images
 
 .DS_Store
 .gitconfig
-*tiff
-*pdf
 *drawio
 *mrc
 *mrc.gz
@@ -78,3 +76,4 @@ submit_stopgap*
 benchmarks.tar.gz
 benchmarks
 data.nosync
+plots
