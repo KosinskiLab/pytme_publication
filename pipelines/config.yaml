@@ -1,12 +1,17 @@
-NCORES: [1,2,4,8,16,32,64]
+NCORES: [1,2,4,8,16,32]
 OUTPUT_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/benchmarks"
+OUTPUT_PATH_TEMP: "/g/kosinski/vmaurer/templateMatchingLibrary/benchmarks_temp"
+
 ANGULAR_SAMPLING: 15
-TOMOGRAM_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/maps/002.rec"
-TOMOGRAM_TEMPLATE: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/tmpl/template.mrc"
-TOMOGRAM_TEMPLATE_MASK: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase/masks/mask.mrc"
-STOPGAP_ROOTDIR: "/g/kosinski/vmaurer/templateMatchingLibrary/data/stopgapBase"
-MAP_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621.mrc"
-MAP_PATH_PADDED: "/g/kosinski/vmaurer/templateMatchingLibrary/data/emd_8621_padded.mrc"
-MAP_TEMPLATE: "/g/kosinski/vmaurer/templateMatchingLibrary/data/5uz4.cif"
+ANGULAR_SAMPLING_SITUS: 20
+
+TOMOGRAM_PATH: "/scratch/vmaurer/templateMatchingLibrary/data/stopgapBase/maps/002.rec"
+TOMOGRAM_TEMPLATE: "/scratch/vmaurer/templateMatchingLibrary/data/stopgapBase/tmpl/template.mrc"
+TOMOGRAM_TEMPLATE_MASK: "/scratch/vmaurer/templateMatchingLibrary/data/stopgapBase/masks/mask.mrc"
+STOPGAP_ROOTDIR: "/scratch/vmaurer/templateMatchingLibrary/data/stopgapBase"
+
+MAP_PATH: "/scratch/vmaurer/templateMatchingLibrary/data/emd_8621.mrc"
+MAP_PATH_PADDED: "/scratch/vmaurer/templateMatchingLibrary/data/emd_8621_padded.mrc"
+MAP_TEMPLATE: "/scratch/vmaurer/templateMatchingLibrary/data/5uz4.cif"
 MAP_CUTOFF: 0.0309
 MAP_RESOLUTION: 5.8

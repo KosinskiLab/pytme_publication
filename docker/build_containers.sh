@@ -13,9 +13,9 @@ fi
 echo "BUILD_PLATFORM is set to $BUILD_PLATFORM"
 
 WORKDIR=$(pwd)
-cp -r $HOME/src/edm_simulation $WORKDIR/edm_simulation
-rm -rf $WORKDIR/edm_simulation/build
-rm -rf $WORKDIR/edm_simulation/*egg-info
+cp -r $HOME/src/pytme $WORKDIR/pytme
+rm -rf $WORKDIR/pytme/build
+rm -rf $WORKDIR/pytme/*egg-info
 
 docker build \
   -t template_matching \
@@ -47,5 +47,5 @@ docker build \
 docker image tag pytom dquz/pytom:latest
 docker image push dquz/pytom:latest
 
-rm -rf $WORKDIR/edm_simulation
+rm -rf $WORKDIR/pytme
 rm -rf PyTom

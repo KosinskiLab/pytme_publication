@@ -2,9 +2,9 @@ import yaml
 
 import numpy as np
 
-from dge.Density import Density
-from dge.Preprocessor import Preprocessor
-from dge.helpers import topleft_pad
+from tme.Density import Density
+from tme.Preprocessor import Preprocessor
+from tme.helpers import topleft_pad
 
 if __name__ == "__main__":
     with open("../pipelines/config.yaml", "r") as infile:
@@ -36,7 +36,12 @@ if __name__ == "__main__":
         keep_residues={},
     )
 
-    density.trim(cutoff=data["MAP_CUTOFF"], margin=0)
+    density.adjust_box(
+        density.trim(cutoff=data["MAP_CUTOFF"], margin=0)
+    )
+    density.to_file("../data/emd_8621_trim.mrc")
+
     fourier_box = np.add(structure.box_size, density.box_size) - 1
     density.data = topleft_pad(density.data, fourier_box)
+    density.data[density.data == 0] = .5
     density.to_file("../data/emd_8621_padded.mrc")

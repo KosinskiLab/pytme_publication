@@ -4,36 +4,62 @@ from os.path import join
 
 import numpy as np
 
-from dge import Map
-from dge.fitter_utils import estimate_ram_usage
+from tme import Density
+from tme.matching_utils import estimate_ram_usage
 
 configfile : "config.yaml"
-slurm = "signal=B:USR1@300 constraint=rome qos=normal nodes=1"
-slurm_mpi = "signal=B:USR1@300 qos=normal ntasks=24 cpus-per-task=1"
-
+slurm = "signal=B:USR1@300 constraint=rome qos=normal nodes=1 ntasks=1"
 rule all:
     input:
         expand(
             join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}.txt"),
-                tools = ["PyTom", "Ours", "STOPGAP"],
-                ncores = config["NCORES"],
-                trials = [0, 1, 2]
+                tools = ["PyTomModuleNoSplit"],
+                ncores = [16, 32],
+                trials = [0]
         ),
         # expand(
         #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}.txt"),
-        #         tools = ["PyTom", "STOPGAP", "Ours"],
-        #         ncores = config["NCORES"],
+        #         tools = ["PyTom", "PyTomModule", "STOPGAP"],
+        #         ncores = [1, 2, 4, 8],
         #         trials = [0, 1, 2]
         # ),
         # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}_{trials}.txt"),
-        #         tools = ["Situs", "Powerfit", "Ours"],
+        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{order}.txt"),
+        #         tools = ["Ours"],
+        #         ncores = [1,2,4,8],
+        #         order = [3],
+        #         trials = [0, 1, 2]
+        # ),
+        # expand(
+        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}.txt"),
+        #         tools = ["PyTom", "PyTomModule"],
+        #         ncores = [16, 32],
+        #         trials = [0, 1, 2]
+        # ),
+        # expand(
+        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{order}.txt"),
+        #         tools = ["Ours"],
+        #         ncores = [16, 32],
+        #         order = [3],
+        #         trials = [0, 1, 2]
+        # ),
+        # expand(
+        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{orders}.txt"),
+        #         tools = ["Ours"],
+        #         ncores = config["NCORES"],
+        #         orders = [-1, 1, 3],
+        #         trials = [0, 1, 2]
+        # ),
+        # expand(
+        #     join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}_{trials}_{orders}.txt"),
+        #         tools = ["Ours"],
+        #         orders = [-1, 1, 3],
         #         ncores = config["NCORES"],
         #         trials = [0, 1, 2]
         # ),
 
-electron_density = Map.from_file(config["MAP_PATH"])
-structure_density = Map.from_structure(
+electron_density = Density.from_file(config["MAP_PATH"])
+structure_density = Density.from_structure(
     config["MAP_TEMPLATE"],
     origin = electron_density.origin,
     sampling_rate = electron_density.sampling_rate,
@@ -41,37 +67,39 @@ structure_density = Map.from_structure(
 )
 FITTING_RAM = {str(int(cores)) : estimate_ram_usage(
     electron_density.box_size, structure_density.box_size,
-    fitter = "CORR", ncores = cores) for cores in config["NCORES"]}
+    matching_method = "CORR", ncores = cores) for cores in config["NCORES"]}
 
-electron_density = Map.from_file(config["TOMOGRAM_PATH"])
-structure_density = Map.from_file(config["TOMOGRAM_TEMPLATE"])
+electron_density = Density.from_file(config["TOMOGRAM_PATH"])
+structure_density = Density.from_file(config["TOMOGRAM_TEMPLATE"])
 MATCHING_RAM = {str(int(cores)) : estimate_ram_usage(
     np.add(electron_density.box_size, structure_density.box_size,),
-    structure_density.box_size, fitter = "CORR", ncores = cores
+    structure_density.box_size, matching_method = "CORR", ncores = cores
     ) for cores in config["NCORES"]
 }
 
 def get_ram_fitting(wildcards, attempt):
     value = FITTING_RAM[str(wildcards.ncores)]
     value //= 1e6
-    if attempt <= 3:
-        ram_scaling = 1 + 0.1 * (attempt - 1)
-    else:
-        ram_scaling = attempt
-    value *=  ram_scaling
+    ram_scaling = 0.6 + 0.2 * (attempt - 1)
+    value *= ram_scaling
+    value = min(value, 350 * 1e3)
     return value
 
 def get_ram_matching(wildcards, attempt):
     value = MATCHING_RAM[str(wildcards.ncores)]
     value //= 1e6
-    ram_scaling = 0.4 + 0.15 * (attempt - 1)
+    ram_scaling = 0.6 + 0.2 * (attempt - 1)
     value *= ram_scaling
     value = min(value, 350 * 1e3)
     return value
 
-def format_slurm(wildcards, attempt):
+def format_slurm_mpi(wildcards, attempt):
     return f"signal=B:USR1@300 qos=normal ntasks={wildcards.ncores} " \
-            "constraint=rome cpus-per-task=1"
+            "constraint=rome cpus-per-task=1 nodes=1"
+
+def format_slurm(wildcards, attempt):
+    return f"signal=B:USR1@300 constraint=rome qos=normal nodes=1 ntasks=1 "\
+           f"cpus-per-task={wildcards.ncores}"
 
 def get_cores(wildcards):
     return int(wildcards.ncores)
@@ -81,17 +109,16 @@ def make_jobxml(target : str, template : str, template_mask : str,
     return textwrap.dedent(f"""\
         <JobDescription Destination="{outdir}" ID="0" Members="1">
                 <Volume Sampling="[0, 0, 0]" Subregion="[0, 0, 0, 0, 0, 0]" Binning="[0, 0, 0]" Filename="{target}"/>
-          <Reference PreWedge="" File="{template}" Weighting="">
+          <Reference PreWetme="" File="{template}" Weighting="">
           </Reference>
           <Mask Filename="{template_mask}" Binning="1" isSphere="True"/>
-          <SingleTiltWedge Smooth="0.0" Angle1="30" CutoffRadius="0.0" Angle2="30">
+          <SingleTiltWedge Smooth="0.0" Angle1="40" CutoffRadius="0.0" Angle2="40">
             <TiltAxisRotation Z1="0.0" Z2="0.0" X="0.0"/>
           </SingleTiltWedge>
           <Angles Type="FromEMFile" File="{angles}"/>
           <Score Type="FLCFScore" Value="-10000000000.0">
             <PeakPrior Smooth="-1.0" Radius="0.0" Filename=""/>
           </Score>
-          <BandPassFilter LowestFrequency="3.0" Smooth="0.0" HighestFrequency="15.0"/>
         </JobDescription>
     """)
 
@@ -108,21 +135,45 @@ for ncore in config["NCORES"]:
     with open(join(pytom_dir, "TM_job.xml"), "w", encoding = "utf-8") as ofile:
         ofile.write(xml)
 
-# Tomography template matching
+for ncore in config["NCORES"]:
+    pytom_dir = join(config["OUTPUT_PATH"], "PyTomModule", f"{ncore}")
+    makedirs(pytom_dir, exist_ok = True)
+    xml = make_jobxml(
+        target = config["TOMOGRAM_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
+        template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
+        outdir = pytom_dir,
+        angles = "angles_19.95_1944.em"
+    )
+    with open(join(pytom_dir, "TM_job.xml"), "w", encoding = "utf-8") as ofile:
+        ofile.write(xml)
+
+for ncore in config["NCORES"]:
+    pytom_dir = join(config["OUTPUT_PATH"], "PyTomNoSplit", f"{ncore}")
+    makedirs(pytom_dir, exist_ok = True)
+    xml = make_jobxml(
+        target = config["TOMOGRAM_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
+        template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
+        outdir = pytom_dir,
+        angles = "angles_19.95_1944.em"
+    )
+    with open(join(pytom_dir, "TM_job.xml"), "w", encoding = "utf-8") as ofile:
+        ofile.write(xml)
+
 rule PyTom:
     input:
         target = config["TOMOGRAM_PATH"],
         template = config["TOMOGRAM_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "PyTom", "tomogram_{ncores}_{trial}.txt")
-    container:
-       "docker://dquz/pytom:latest"
+    container: "pytom_latest.sif"
     resources:
         avg_mem  = get_ram_matching,
         mem_mb   = get_ram_matching,
         walltime = lambda wildcards, attempt: 5760,
         attempt  = lambda wildcards, attempt: attempt,
-        slurm = format_slurm,
+        slurm = format_slurm_mpi,
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
@@ -130,7 +181,6 @@ rule PyTom:
         ncores = "{ncores}",
         trial="{trial}",
         tm_config = join(config["OUTPUT_PATH"], "PyTom", "{ncores}", "TM_job.xml"),
-    # threads : get_cores,
     shell:"""
         outdir=$(dirname {output})
         tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
@@ -141,8 +191,75 @@ rule PyTom:
             localization.py \
             -j {params.tm_config} \
             -x 1 -y 2 -z 2 2> {output}
+
         echo {resources.avg_mem} >> {output}
-        rm -rf $tempdir
+        """
+
+rule PyTomModule:
+    input:
+        target = config["TOMOGRAM_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
+    output:
+        join(config["OUTPUT_PATH"], "PyTomModule", "tomogram_{ncores}_{trial}.txt")
+    resources:
+        avg_mem  = get_ram_matching,
+        mem_mb   = get_ram_matching,
+        walltime = lambda wildcards, attempt: 5760,
+        attempt  = lambda wildcards, attempt: attempt,
+        slurm = format_slurm_mpi,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        ncores = "{ncores}",
+        trial="{trial}",
+        tm_config = join(config["OUTPUT_PATH"], "PyTomModule", "{ncores}", "TM_job.xml"),
+    shell:"""
+        module load PyTom/1.0-foss-2021a-CUDA-11.3.1
+        outdir=$(dirname {output})
+        tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
+        mkdir -p $tempdir
+        cd $tempdir
+        /usr/bin/time -v mpirun \
+            -np {params.ncores} \
+            localization.py \
+            -j {params.tm_config} \
+            -x 1 -y 2 -z 2 2> {output}
+
+        echo {resources.avg_mem} >> {output}
+        """
+
+rule PyTomModuleNoSplit:
+    input:
+        target = config["TOMOGRAM_PATH"],
+        template = config["TOMOGRAM_TEMPLATE"],
+    output:
+        join(config["OUTPUT_PATH"], "PyTomModuleNoSplit", "tomogram_{ncores}_{trial}.txt")
+    resources:
+        avg_mem  = get_ram_matching,
+        mem_mb   = get_ram_matching,
+        walltime = lambda wildcards, attempt: 5760,
+        attempt  = lambda wildcards, attempt: attempt,
+        slurm = format_slurm_mpi,
+    params:
+        angular_sampling = config['ANGULAR_SAMPLING'],
+        map_resolution = config['MAP_RESOLUTION'],
+        map_cutoff = config['MAP_CUTOFF'],
+        ncores = "{ncores}",
+        trial="{trial}",
+        tm_config = join(config["OUTPUT_PATH"], "PyTomModule", "{ncores}", "TM_job.xml"),
+    shell:"""
+        module load PyTom/1.0-foss-2021a-CUDA-11.3.1
+        outdir=$(dirname {output})
+        tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
+        mkdir -p $tempdir
+        cd $tempdir
+        /usr/bin/time -v mpirun \
+            -np {params.ncores} \
+            localization.py \
+            -j {params.tm_config} 2> {output}
+
+        echo {resources.avg_mem} >> {output}
         """
 
 rule STOPGAP:
@@ -156,7 +273,7 @@ rule STOPGAP:
         mem_mb   = get_ram_matching,
         walltime = lambda wildcards, attempt: 5760,
         attempt  = lambda wildcards, attempt: attempt,
-        slurm = format_slurm,
+        slurm = format_slurm_mpi,
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
@@ -164,7 +281,6 @@ rule STOPGAP:
         ncores = "{ncores}",
         trial="{trial}",
         rootdir = config["STOPGAP_ROOTDIR"],
-    # threads : get_cores,
     shell:"""
         module load STOPGAP/0.7.1-foss-2020b-MCR-R2016b
         export STOPGAPHOME="/home/vmaurer/src/STOPGAP/exec"
@@ -187,16 +303,17 @@ rule STOPGAP:
             $tempdir \
             tm_param.star \
             {params.ncores} 2> {output}
+
         echo {resources.avg_mem} >> {output}
-        rm -rf $tempdir
         """
 
 rule ourTomo:
     input:
         target = config["TOMOGRAM_PATH"],
         template = config["TOMOGRAM_TEMPLATE"],
+        template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
     output:
-        join(config["OUTPUT_PATH"], "Ours", "tomogram_{ncores}_{trial}.txt")
+        join(config["OUTPUT_PATH"], "Ours", "tomogram_{ncores}_{trial}_{order}.txt"),
     container:
        "docker://dquz/template_matching:latest"
     resources:
@@ -204,27 +321,31 @@ rule ourTomo:
         mem_mb   = get_ram_matching,
         walltime = lambda wildcards, attempt: 5760,
         attempt  = lambda wildcards, attempt: attempt,
-        slurm = slurm
+        slurm = format_slurm
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
         trial="{trial}",
-    threads : get_cores,
+        order="{order}",
     shell:"""
         outdir=$(dirname {output})
-        tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
+        tempdir=$outdir/{params.ncores}_{params.trial}_{params.order}_tomogram/
         mkdir -p $tempdir
         cd $tempdir
         /usr/bin/time -v match_template.py \
             -m {input.target} \
             -i {input.template} \
-            -s CORR \
-            -n {threads} \
+            --template_mask {input.template_mask} \
+            --cutoff_template 0 \
+            -s FLCSphericalMask \
+            -n {params.ncores} \
+            --interpolation_order {params.order} \
+            -r 1000000000000000 \
             -a {params.angular_sampling} 2> {output}
+
         echo {resources.avg_mem} >> {output}
-        rm -rf $tempdir
         """
 
 rule Situs:
@@ -238,16 +359,15 @@ rule Situs:
     resources:
         avg_mem  = get_ram_fitting,
         mem_mb   = get_ram_fitting,
-        walltime = lambda wildcards, attempt: 1200 * attempt,
+        walltime = lambda wildcards, attempt: 5760,
         attempt  = lambda wildcards, attempt: attempt,
-        slurm = slurm
+        slurm = format_slurm
     params:
-        angular_sampling = config['ANGULAR_SAMPLING'],
+        angular_sampling = config['ANGULAR_SAMPLING_SITUS'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
         trial="{trial}",
-    threads : get_cores,
     shell:"""
         outdir=$(dirname {output})
         tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
@@ -256,17 +376,17 @@ rule Situs:
 
         /usr/bin/time -v colores {input.target} {input.template} \
             -res {params.map_resolution} \
-            -sizef 0 \
             -deg {params.angular_sampling} \
+            -sizef 0 \
             -nopowell \
-            -nprocs {threads} 2> {output}
+            -nprocs {params.ncores} 2> {output}
+
         echo {resources.avg_mem} >> {output}
-        rm -rf $tempdir
         """
 
 rule Powerfit:
     input:
-        target = config["MAP_PATH"],
+        target = config["MAP_PATH_PADDED"],
         template = config["MAP_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "Powerfit", "fitting_{ncores}_{trial}.txt")
@@ -275,30 +395,34 @@ rule Powerfit:
     resources:
         avg_mem  = get_ram_fitting,
         mem_mb   = get_ram_fitting,
-        walltime = lambda wildcards, attempt: 1200 * attempt,
+        walltime = lambda wildcards, attempt: 840,
         attempt  = lambda wildcards, attempt: attempt,
-        slurm = slurm
+        slurm = format_slurm
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
         trial="{trial}",
-    threads : get_cores,
     shell:"""
         outdir=$(dirname {output})
         tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
         mkdir -p $tempdir
         cd $tempdir
 
-        /usr/bin/time -v powerfit {input.target} {params.map_resolution} \
+        export MKL_NUM_THREADS=
+        export OMP_NUM_THREADS=1
+        export OPENBLAS_NUM_THREADS=1
+
+        /usr/bin/time -v powerfit {input.target} \
+            {params.map_resolution} \
             {input.template} \
             --no-resampling \
             --no-trimming \
             -a {params.angular_sampling} \
-            -p {threads} 2> {output}
+            -p {params.ncores} 2> {output}
+
         echo {resources.avg_mem} >> {output}
-        rm -rf $tempdir
         """
 
 rule our:
@@ -306,21 +430,22 @@ rule our:
         target = config["MAP_PATH"],
         template = config["MAP_TEMPLATE"],
     output:
-        join(config["OUTPUT_PATH"], "Ours", "fitting_{ncores}_{trial}.txt")
+        join(config["OUTPUT_PATH"], "Ours", "fitting_{ncores}_{trial}_{order}.txt"),
     container:
        "docker://dquz/template_matching:latest"
     resources:
         avg_mem  = get_ram_fitting,
         mem_mb   = get_ram_fitting,
-        walltime = lambda wildcards, attempt: 1200 * attempt,
+        walltime = lambda wildcards, attempt: 5760,
         attempt  = lambda wildcards, attempt: attempt,
-        slurm = slurm
+        slurm = format_slurm
     params:
         angular_sampling = config['ANGULAR_SAMPLING'],
         map_resolution = config['MAP_RESOLUTION'],
         map_cutoff = config['MAP_CUTOFF'],
         ncores = "{ncores}",
         trial="{trial}",
+        order="{order}",
     threads : get_cores,
     shell:"""
         outdir=$(dirname {output})
@@ -328,13 +453,17 @@ rule our:
         mkdir -p $tempdir
         cd $tempdir
 
-        /usr/bin/time -v fit.py \
+        /usr/bin/time -v match_template.py \
             -m {input.target} \
             -i {input.template} \
-            -c {params.map_cutoff} \
+            --cutoff_target {params.map_cutoff} \
+            --cutoff_template 0 \
             -s CORR \
-            -n {threads} \
+            -n {params.ncores} \
+            --no_edge_padding \
+            --interpolation_order {params.order} \
+            -r 1000000000000000 \
             -a {params.angular_sampling} 2> {output}
+
         echo {resources.avg_mem} >> {output}
-        rm -rf $tempdir
         """

@@ -43,7 +43,7 @@ RUN apt-get update && \
     make clean && \
     ln -s /src/Situs_${SITUS_VERSION}/bin/* /usr/bin/
 
-COPY edm_simulation /src/edm_simulation
-RUN cd /src/edm_simulation && python${PYTHON_VERSION} -mpip install .
-#RUN cd /src/edm_simulation && pytest -vvv
+COPY pytme /src/pytme
+RUN cd /src/pytme && python${PYTHON_VERSION} -mpip install .
+#RUN cd /src/pytme && pytest -vvv
 RUN python3.11 -mpip install psutil
