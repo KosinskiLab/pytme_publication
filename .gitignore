@@ -63,15 +63,9 @@ Images
 .DS_Store
 .gitconfig
 *drawio
-*mrc
-*mrc.gz
-*pdb
-*cif
-
 *log*
 *err*
 submit_stopgap*
-*zip
 *.Rhistory
 benchmarks.tar.gz
 benchmarks
