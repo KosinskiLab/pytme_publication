@@ -70,11 +70,7 @@ plots = lapply(c("tomogram", "fitting"), function(method){
     variable, levels = c("system_time", "ram_usage"),
     labels = c("Runtime [seconds]", "RAM usage [GB]"))
   ]
-  format_labels = function(x){
-    h = x %/% 1
-    m = as.integer((x - h) * 60)
-    ret = sprintf("%02d:%02d", h, m)
-  }
+
   timings_long[variable == "Runtime [seconds]", value := value / 3600]
   timings_long = timings_long[complete.cases(timings_long)]
   breaks = unique(timings_long[variable == "Runtime [seconds]"]$value)
@@ -238,15 +234,11 @@ plots = lapply(c("tomogram", "fitting"), function(method){
 })
 
 method_colors = c(pyTME = "#A7D9CB", PyTom = "#2188c9", STOPGAP = "#fca349")
-# pyTME 12648 rotations, pytom 15192
+# pyTME 27672 rotations, pytom 15192
 gpu_timings = data.table(
   method = c("PyTom", "PyTom", "PyTom", "pyTME", "pyTME", "pyTME"),
   value = c(2272.647601, 2253.280556, 2244.871726, 2433.147, 2432.139, 2437.942)
 )
-# gpu_timings = data.table(
-#   method = c("PyTom", "PyTom", "PyTom", "pyTME", "pyTME", "pyTME"),
-#   value = c(2272.647601, 2253.280556, 2244.871726, 2133.147, 2132.139, 2137.942)
-# )
 gpu_timings[method == "pyTME", value := value * 15192 / 27672]
 gpu_timings = gpu_timings[, value := value / 3600]
 gpu_timings = gpu_timings[, .(mean_runtime = mean(value), sd_runtime = sd(value)), by = method]
@@ -285,36 +277,6 @@ upperTotal = cowplot::plot_grid(
 )
 upperTotal
 ggsave("toolComparison.pdf", upperTotal, width = 12, height = 6)
-
-dark_theme = theme(
-      legend.position = "bottom", 
-      plot.background = element_rect(fill = "transparent", color = NA),
-      legend.background = element_rect(fill = "transparent"),
-      legend.text = element_text(color = "white"),
-      legend.title = element_text(color = "white"),
-      axis.text.x = element_text(color = "white"),
-      axis.text.y = element_text(color = "white"),
-      axis.title.x = element_text(color = "white"),
-      axis.title.y = element_text(color = "white"),
-      axis.ticks.x = element_line(color = "white"),
-      axis.ticks.y = element_line(color = "white"),
-      panel.border = element_rect(color = "white"),
-      panel.background = element_rect(fill = "transparent")
-)
-
-upperTotal = cowplot::plot_grid(plotlist = plots, labels = c("A", "B"), ncol = 2)
-upperTotal
-ggsave("toolComparisonERC.pdf", upperTotal, width = 10.5, height = 6)
-upperTotal = cowplot::plot_grid(plotlist = plots, labels = c("A", "B"), nrow = 2)
-upperTotal
-ggsave("toolComparisonERCRow.pdf", upperTotal, width = 8, height = 10.5)
-
-
-upperTotal = cowplot::plot_grid(plotlist = lapply(plots, function(plot){plot + dark_theme}),
-                                labels = c("A", "B"), ncol = 2, label_colour = "white")
-upperTotal
-ggsave("toolComparisonERC_Dark.pdf", upperTotal, width = 10, height = 6, bg = "transparent")
-
 
 
 bin_timings = data.table(
