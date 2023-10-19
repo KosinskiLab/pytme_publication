@@ -1,4 +1,4 @@
-setwd("/Users/vmaurer/Documents/PhD/Projects/templateMatchingLibrary/plots.nosync/")
+setwd("/Users/vmaurer/Documents/PhD/Projects/templateMatchingLibrary/plots/")
 packages = c(
   "data.table",
   "ggplot2",
@@ -10,6 +10,7 @@ packages = c(
 )
 out = suppressPackageStartupMessages(sapply(packages, library, character.only=T))
 N_BREAKS = 8
+FONT_SIZE = 18
 
 format_labels = function(x){
   h = x %/% 1
@@ -17,123 +18,6 @@ format_labels = function(x){
   ret = sprintf("%02d:%02d", h, m)
 }
 
-method = "tomogram"
-plots = lapply(c("tomogram", "fitting"), function(method){
-  if (method == "tomogram"){
-    method_colors = c(pyTME = "#A7D9CB", PyTom = "#2188c9", STOPGAP = "#fca349")
-    file_pattern = "tomogram_\\d+_\\d+(_.?\\d+)?.txt"
-  }else{
-    method_colors = c(pyTME = "#A7D9CB", Situs = "#9B85C1", PowerFit = "#DAA520")
-    file_pattern = "fitting_\\d+_\\d+(_.?\\d+)?.txt"
-  }
-  
-  timings = list.files("../benchmarks/", 
-                                full.names = T, recursive = T, pattern = file_pattern)
-  timings = gsub(timings, pattern = "/+", replacement = "/")
-  timings = rbindlist(lapply(timings, function(trial){
-    temp = readLines(trial)
-    if (length(temp) == 0){
-      return(data.table())
-    }
-    system_time = temp[grepl(pattern = "Elapsed", temp)]
-    ram_usage = temp[length(temp)]
-    timing = trimws(gsub(system_time, pattern = ".*):(.*)", replacement = "\\1"))
-    if (length(stringr::str_count(timing, ":")) == 0){
-      system_time = NA
-    }else if(stringr::str_count(timing, ":") == 1){
-      # is mm:ss
-      system_time = as.numeric(gsub(timing, pattern = "(.*):(.*)", replacement = "\\1")) * 60
-      system_time = system_time + as.numeric(gsub(timing, pattern = "(.*):(.*)", replacement = "\\2"))
-    }else if(stringr::str_count(timing, ":") == 2){
-      # is hh:mm:ss
-      system_time = as.numeric(gsub(timing, pattern = "(.*):(.*):(.*)", replacement = "\\1")) * 3600
-      system_time = system_time + as.numeric(gsub(timing, pattern = "(.*):(.*):(.*)", replacement = "\\2")) * 60
-      system_time = system_time + as.numeric(gsub(timing, pattern = "(.*):(.*):(.*)", replacement = "\\3"))
-    }
-    ram_usage = as.numeric(ram_usage)/1e3
-    method = gsub(trial, pattern = ".*/benchmarks/([a-zA-Z0-9]*)/.*txt", replacement = "\\1")
-    splits = strsplit(basename(trial), "_")[[1]]
-    ncores = as.numeric(splits[2])
-    run = as.numeric(gsub(pattern = "(\\d+)\\.?(txt)?", replacement = "\\1", splits[3]))
-    interpolation = as.numeric(gsub(pattern = "(\\-?\\d+)\\.?(txt)?", replacement = "\\1", splits[4]))
-    data.table(
-      method = method, system_time = system_time, ram_usage = ram_usage, ncores = ncores, run = run, interpolation = interpolation
-    )
-  }))
-  timings[method != "Ours", interpolation := 0]
-  timings[method == "Ours" & interpolation != -1, ncores := NA]
-  timings[method == "Ours", method := "pyTME"]
-  
-  timings = timings[ncores <= 32]
-  timings_long = melt(timings, measure.vars = c("system_time", "ram_usage"))
-  timings_long[, variable := factor(
-    variable, levels = c("system_time", "ram_usage"),
-    labels = c("Runtime [seconds]", "RAM usage [GB]"))
-  ]
-
-  timings_long[variable == "Runtime [seconds]", value := value / 3600]
-  timings_long = timings_long[complete.cases(timings_long)]
-  breaks = unique(timings_long[variable == "Runtime [seconds]"]$value)
-  breaks = c(0:(max(timings_long[variable == "Runtime [seconds]"]$value + 1)),
-             min(timings_long[variable == "Runtime [seconds]"]$value)
-  )
-  timings_long[, new_group:= paste(method, interpolation, sep = "_")]
-  timings_mean = timings_long[variable == "Runtime [seconds]"][, mean(value), by = .(method, ncores)]
-  p1 = ggplot(timings_long[variable == "Runtime [seconds]"],
-              aes(x = ncores, y = value, fill = method, group = new_group))+
-    geom_point(size = 2, shape = 21, color = "#000000", alpha= .7)+
-    geom_line(data = timings_mean, mapping = aes(x = ncores, y = V1, color = method, group = method))+
-    theme_bw(base_size = 14)+
-    scale_color_manual(name = "Method", values = method_colors)+
-    scale_fill_manual(name = "Method", values = method_colors)+
-    ylab("Runtime [hh:mm]")+
-    xlab("CPU cores")+
-    scale_y_continuous(
-      trans = "log2",
-      labels = format_labels,
-      n.breaks = N_BREAKS,
-      limits = c(
-        0.7 * min(timings_long[variable == "Runtime [seconds]"]$value), 
-        1.3 * max(timings_long[variable == "Runtime [seconds]"]$value)
-      ),
-      # breaks = breaks,
-      # labels= format_labels(breaks)
-      )+
-    scale_x_continuous(breaks = sort(unique(timings_long$ncores)), trans = "log2")+
-    theme(legend.position = "bottom")
-  p1
-  
-  ram_mean = timings_long[variable == "RAM usage [GB]"][, mean(value), by = .(method, ncores)]
-  timings_long$origin = method
-  p2 = ggplot(timings_long[variable == "RAM usage [GB]"],
-              aes(x = ncores, y = value, color = method, group = method, fill = method))+
-    geom_point(size = 2, shape = 21, color = "#000000", alpha = .7)+
-    geom_line(data = ram_mean, mapping = aes(x = ncores, y = V1, color = method, group = method))+
-    theme_bw(base_size = 14)+
-    scale_color_manual(name = "Method", values = method_colors)+
-    scale_fill_manual(name = "Method", values = method_colors)+
-    ylab("RAM usage [GB]")+
-    xlab("CPU cores")+
-    scale_x_continuous(breaks = sort(unique(timings_long$ncores)), trans = "log2")+
-    scale_y_continuous(n.breaks = N_BREAKS, trans = "log2")+
-    
-    theme(legend.position = "bottom")
-  p2
-  
-  lgd = cowplot::get_legend(p1)
-  upper = cowplot::plot_grid(plotlist = list(
-    p1 + theme(legend.position = "None"), p2+ theme(legend.position = "None")))
-  upperTotal = cowplot::plot_grid(plotlist = list(upper, lgd), rel_heights = c(.9, .1), 
-                             nrow = 2, ncol = 1)
-  upperTotal
-})
-
-upperTotal = cowplot::plot_grid(plotlist = plots, labels = c("A", "B"), nrow = 2)
-upperTotal
-ggsave("toolComparisonLinearScale.pdf", upperTotal, width = 10, height = 8)
-
-
-FONT_SIZE = 18
 plots = lapply(c("tomogram", "fitting"), function(method){
   if (method == "tomogram"){
     method_colors = c(pyTME = "#A7D9CB", PyTom = "#2188c9", STOPGAP = "#fca349")
@@ -178,11 +62,14 @@ plots = lapply(c("tomogram", "fitting"), function(method){
   }))
   timings[method != "Ours", interpolation := 0]
   timings[method == "Ours" & interpolation != -1, ncores := NA]
-  timings[method == "Ours", method := "pyTME"]
-  
+  if(method == "tomogram"){
+    timings[method == "OursNoPadding", method := "pyTME"]
+  }else{
+    timings[method == "Ours", method := "pyTME"]
+  }
   timings = timings[method == "Powerfit", method := "PowerFit"]
   
-  timings = timings[method != "PyTomModule"]
+  timings = timings[method %in% names(method_colors)]
   timings = timings[ncores <= 32]
   
   timings[, method := factor(method, levels = names(method_colors), labels = names(method_colors))]
@@ -221,7 +108,6 @@ plots = lapply(c("tomogram", "fitting"), function(method){
       )
     )+
     ggtitle("AMD Epyc 7502 (CPU)")+
-    # annotation_logticks(base = 2)+
     scale_x_continuous(
       breaks = sort(unique(timings_long$ncores)), 
       trans = "log2",
@@ -235,9 +121,14 @@ plots = lapply(c("tomogram", "fitting"), function(method){
 
 method_colors = c(pyTME = "#A7D9CB", PyTom = "#2188c9", STOPGAP = "#fca349")
 # pyTME 27672 rotations, pytom 15192
+# gpu_timings = data.table(
+#   method = c("PyTom", "PyTom", "PyTom", "pyTME", "pyTME", "pyTME"),
+#   value = c(2272.647601, 2253.280556, 2244.871726, 2433.147, 2432.139, 2437.942)
+# )
+# pyTME 27672 mixed precision no padding rotations, pytom 15192
 gpu_timings = data.table(
   method = c("PyTom", "PyTom", "PyTom", "pyTME", "pyTME", "pyTME"),
-  value = c(2272.647601, 2253.280556, 2244.871726, 2433.147, 2432.139, 2437.942)
+  value = c(2272.647601, 2253.280556, 2244.871726, 1914.26, 1914.55, 1910.67)
 )
 gpu_timings[method == "pyTME", value := value * 15192 / 27672]
 gpu_timings = gpu_timings[, value := value / 3600]
@@ -305,14 +196,12 @@ bin_timings_lots = ggplot(bin_timings,aes(x = bin, y = value, fill = "#A7D9CB"))
     scale_y_continuous(
       trans = "log10",
       labels = format_labels,
-      # n.breaks = N_BREAKS,
       breaks = sort(unique(timings_mean$V1)),
       limits = c(
         1 * min(bin_timings$value), 
         1.3 * max(bin_timings$value)
       )
     )+
-    annotation_logticks(base = 10)+
     scale_x_continuous(
       breaks = sort(unique(bin_timings$bin)), 
       trans = "log2",

@@ -1,6 +1,7 @@
 import textwrap
 from os import makedirs
-from os.path import join
+from os.path import join, exists
+from shutil import copytree, rmtree
 
 import numpy as np
 
@@ -8,72 +9,53 @@ from tme import Density
 from tme.matching_utils import estimate_ram_usage
 
 configfile : "config.yaml"
-slurm = "signal=B:USR1@300 constraint=rome qos=normal nodes=1 ntasks=1"
+
 rule all:
     input:
         expand(
             join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}.txt"),
-                tools = ["PyTomModuleNoSplit"],
-                ncores = [16, 32],
-                trials = [0]
+                tools = ["STOPGAP", "PyTom"],
+                ncores = config["NCORES"],
+                trials = config["TRIALS"],
         ),
-        # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}.txt"),
-        #         tools = ["PyTom", "PyTomModule", "STOPGAP"],
-        #         ncores = [1, 2, 4, 8],
-        #         trials = [0, 1, 2]
-        # ),
-        # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{order}.txt"),
-        #         tools = ["Ours"],
-        #         ncores = [1,2,4,8],
-        #         order = [3],
-        #         trials = [0, 1, 2]
-        # ),
-        # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}.txt"),
-        #         tools = ["PyTom", "PyTomModule"],
-        #         ncores = [16, 32],
-        #         trials = [0, 1, 2]
-        # ),
-        # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{order}.txt"),
-        #         tools = ["Ours"],
-        #         ncores = [16, 32],
-        #         order = [3],
-        #         trials = [0, 1, 2]
-        # ),
-        # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{orders}.txt"),
-        #         tools = ["Ours"],
-        #         ncores = config["NCORES"],
-        #         orders = [-1, 1, 3],
-        #         trials = [0, 1, 2]
-        # ),
-        # expand(
-        #     join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}_{trials}_{orders}.txt"),
-        #         tools = ["Ours"],
-        #         orders = [-1, 1, 3],
-        #         ncores = config["NCORES"],
-        #         trials = [0, 1, 2]
-        # ),
+        expand(
+            join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}_{trials}.txt"),
+                tools = ["PyTom", "PyTomModule", "STOPGAP"],
+                ncores = [1, 2, 4, 8],
+                trials = [0, 1, 2]
+        ),
+        expand(
+            join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{order}.txt"),
+                tools = ["OursNoPadding"],
+                ncores =config["NCORES"],
+                trials = [0, 1, 2],
+                order=[3]
+        ),
+        expand(
+            join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}_{trials}_{orders}.txt"),
+                tools = ["Ours"],
+                orders = [-1],
+                ncores = config["NCORES"],
+                trials = [0, 1, 2]
+        ),
+
 
 electron_density = Density.from_file(config["MAP_PATH"])
 structure_density = Density.from_structure(
     config["MAP_TEMPLATE"],
     origin = electron_density.origin,
     sampling_rate = electron_density.sampling_rate,
-    shape = electron_density.box_size
+    shape = electron_density.shape
 )
 FITTING_RAM = {str(int(cores)) : estimate_ram_usage(
-    electron_density.box_size, structure_density.box_size,
+    electron_density.shape, structure_density.shape,
     matching_method = "CORR", ncores = cores) for cores in config["NCORES"]}
 
 electron_density = Density.from_file(config["TOMOGRAM_PATH"])
 structure_density = Density.from_file(config["TOMOGRAM_TEMPLATE"])
 MATCHING_RAM = {str(int(cores)) : estimate_ram_usage(
-    np.add(electron_density.box_size, structure_density.box_size,),
-    structure_density.box_size, matching_method = "CORR", ncores = cores
+    np.add(electron_density.shape, structure_density.shape,),
+    structure_density.shape, matching_method = "CORR", ncores = cores
     ) for cores in config["NCORES"]
 }
 
@@ -136,30 +118,11 @@ for ncore in config["NCORES"]:
         ofile.write(xml)
 
 for ncore in config["NCORES"]:
-    pytom_dir = join(config["OUTPUT_PATH"], "PyTomModule", f"{ncore}")
-    makedirs(pytom_dir, exist_ok = True)
-    xml = make_jobxml(
-        target = config["TOMOGRAM_PATH"],
-        template = config["TOMOGRAM_TEMPLATE"],
-        template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
-        outdir = pytom_dir,
-        angles = "angles_19.95_1944.em"
-    )
-    with open(join(pytom_dir, "TM_job.xml"), "w", encoding = "utf-8") as ofile:
-        ofile.write(xml)
-
-for ncore in config["NCORES"]:
-    pytom_dir = join(config["OUTPUT_PATH"], "PyTomNoSplit", f"{ncore}")
-    makedirs(pytom_dir, exist_ok = True)
-    xml = make_jobxml(
-        target = config["TOMOGRAM_PATH"],
-        template = config["TOMOGRAM_TEMPLATE"],
-        template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
-        outdir = pytom_dir,
-        angles = "angles_19.95_1944.em"
-    )
-    with open(join(pytom_dir, "TM_job.xml"), "w", encoding = "utf-8") as ofile:
-        ofile.write(xml)
+    for trial in config["TRIALS"]:
+        stopgap_dir = join(config["OUTPUT_PATH"], "STOPGAP", f"{ncore}_{trial}_fitting")
+        print(config["STOPGAP_ROOTDIR"], stopgap_dir)
+        if not exists(stopgap_dir):
+            copytree(config["STOPGAP_ROOTDIR"], stopgap_dir, dirs_exist_ok=True)
 
 rule PyTom:
     input:
@@ -195,73 +158,6 @@ rule PyTom:
         echo {resources.avg_mem} >> {output}
         """
 
-rule PyTomModule:
-    input:
-        target = config["TOMOGRAM_PATH"],
-        template = config["TOMOGRAM_TEMPLATE"],
-    output:
-        join(config["OUTPUT_PATH"], "PyTomModule", "tomogram_{ncores}_{trial}.txt")
-    resources:
-        avg_mem  = get_ram_matching,
-        mem_mb   = get_ram_matching,
-        walltime = lambda wildcards, attempt: 5760,
-        attempt  = lambda wildcards, attempt: attempt,
-        slurm = format_slurm_mpi,
-    params:
-        angular_sampling = config['ANGULAR_SAMPLING'],
-        map_resolution = config['MAP_RESOLUTION'],
-        map_cutoff = config['MAP_CUTOFF'],
-        ncores = "{ncores}",
-        trial="{trial}",
-        tm_config = join(config["OUTPUT_PATH"], "PyTomModule", "{ncores}", "TM_job.xml"),
-    shell:"""
-        module load PyTom/1.0-foss-2021a-CUDA-11.3.1
-        outdir=$(dirname {output})
-        tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
-        mkdir -p $tempdir
-        cd $tempdir
-        /usr/bin/time -v mpirun \
-            -np {params.ncores} \
-            localization.py \
-            -j {params.tm_config} \
-            -x 1 -y 2 -z 2 2> {output}
-
-        echo {resources.avg_mem} >> {output}
-        """
-
-rule PyTomModuleNoSplit:
-    input:
-        target = config["TOMOGRAM_PATH"],
-        template = config["TOMOGRAM_TEMPLATE"],
-    output:
-        join(config["OUTPUT_PATH"], "PyTomModuleNoSplit", "tomogram_{ncores}_{trial}.txt")
-    resources:
-        avg_mem  = get_ram_matching,
-        mem_mb   = get_ram_matching,
-        walltime = lambda wildcards, attempt: 5760,
-        attempt  = lambda wildcards, attempt: attempt,
-        slurm = format_slurm_mpi,
-    params:
-        angular_sampling = config['ANGULAR_SAMPLING'],
-        map_resolution = config['MAP_RESOLUTION'],
-        map_cutoff = config['MAP_CUTOFF'],
-        ncores = "{ncores}",
-        trial="{trial}",
-        tm_config = join(config["OUTPUT_PATH"], "PyTomModule", "{ncores}", "TM_job.xml"),
-    shell:"""
-        module load PyTom/1.0-foss-2021a-CUDA-11.3.1
-        outdir=$(dirname {output})
-        tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
-        mkdir -p $tempdir
-        cd $tempdir
-        /usr/bin/time -v mpirun \
-            -np {params.ncores} \
-            localization.py \
-            -j {params.tm_config} 2> {output}
-
-        echo {resources.avg_mem} >> {output}
-        """
-
 rule STOPGAP:
     input:
         target = config["TOMOGRAM_PATH"],
@@ -288,14 +184,12 @@ rule STOPGAP:
 
         outdir=$(dirname {output})
         tempdir=$outdir/{params.ncores}_{params.trial}_fitting/
-        mkdir -p $tempdir
-        cp -r {params.rootdir}/* $tempdir
         cd $tempdir
         rootdir={params.rootdir}
         sed -i "s|$rootdir|$tempdir|g" tm_param.star
 
-        echo $rootdir
         echo $tempdir
+        echo "starting"
 
         /usr/bin/time -v mpiexec \
             -np {params.ncores} \
@@ -307,13 +201,17 @@ rule STOPGAP:
         echo {resources.avg_mem} >> {output}
         """
 
-rule ourTomo:
+rule ourTomoNoPadding:
     input:
         target = config["TOMOGRAM_PATH"],
         template = config["TOMOGRAM_TEMPLATE"],
         template_mask = config["TOMOGRAM_TEMPLATE_MASK"],
     output:
-        join(config["OUTPUT_PATH"], "Ours", "tomogram_{ncores}_{trial}_{order}.txt"),
+        join(
+            config["OUTPUT_PATH"],
+            "OursNoPadding",
+            "tomogram_{ncores}_{trial}_{order}.txt"
+        ),
     container:
        "docker://dquz/template_matching:latest"
     resources:
@@ -333,6 +231,7 @@ rule ourTomo:
         outdir=$(dirname {output})
         tempdir=$outdir/{params.ncores}_{params.trial}_{params.order}_tomogram/
         mkdir -p $tempdir
+        echo $TMPDIR
         cd $tempdir
         /usr/bin/time -v match_template.py \
             -m {input.target} \
@@ -341,12 +240,14 @@ rule ourTomo:
             --cutoff_template 0 \
             -s FLCSphericalMask \
             -n {params.ncores} \
-            --interpolation_order {params.order} \
             -r 1000000000000000 \
+            --no_edge_padding \
+            --no_fourier_padding \
             -a {params.angular_sampling} 2> {output}
 
         echo {resources.avg_mem} >> {output}
         """
+
 
 rule Situs:
     input:

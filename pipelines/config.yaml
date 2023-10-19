@@ -1,4 +1,5 @@
 NCORES: [1,2,4,8,16,32]
+TRIALS: [0, 1, 2]
 OUTPUT_PATH: "/g/kosinski/vmaurer/templateMatchingLibrary/benchmarks"
 OUTPUT_PATH_TEMP: "/g/kosinski/vmaurer/templateMatchingLibrary/benchmarks_temp"
 

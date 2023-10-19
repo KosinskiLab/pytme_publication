@@ -28,4 +28,6 @@ ANGULAR_SAMPLING=8
     --use_gpu \
     -r 1000000000000000 \
     --no_edge_padding \
+    --no_fourier_padding \
+    --use_mixed_precision \
     -a $ANGULAR_SAMPLING

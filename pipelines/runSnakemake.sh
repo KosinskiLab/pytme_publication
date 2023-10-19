@@ -1,6 +1,5 @@
 #!/bin/bash
 
-echo "make sure to run 'conda activate dge' prior to using this script."
 snakemake \
   --use-singularity \
   --singularity-args "-B /scratch:/scratch \

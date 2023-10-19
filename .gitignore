@@ -71,3 +71,5 @@ benchmarks.tar.gz
 benchmarks
 data.nosync
 plots
+pipelines/Snakefile_old
+source/comparison_old.R
