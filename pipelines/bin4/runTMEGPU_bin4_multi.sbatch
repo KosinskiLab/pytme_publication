@@ -27,4 +27,4 @@ ANGULAR_SAMPLING=15
     -a $ANGULAR_SAMPLING \
     --no_edge_padding \
     --no_fourier_padding \
-    -o bin8.pickle
+    -o bin4.pickle

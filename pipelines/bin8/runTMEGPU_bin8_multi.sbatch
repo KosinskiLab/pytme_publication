@@ -4,7 +4,8 @@
 #SBATCH -N 1
 #SBATCH -t 0:30:00
 #SBATCH -C gpu=3090
-#SBATCH --gres=gpu:1
+#$BATCH --qos=highest
+#SBATCH --gres=gpu:2
 #SBATCH --export=NONE
 
 source $HOME/.bashrc
