@@ -183,6 +183,19 @@ bin_timings = data.table(
     30.56,30.82,32.46
   )
 )
+bin_timings_multi = data.table(
+  bin = c(
+    1,1,1, 
+    2,2,2, 
+    4,4,4,
+    8,8,8),
+  value = c(
+    0,0,0,
+    2038.43,2036.49,2035.41,
+    260.01,259.03,258.97,
+    52.66,0,0
+  )
+)
 bin_timings[, value := value / 3600]
 timings_mean = bin_timings[, mean(value), by = .(bin)]
 bin_timings_lots = ggplot(bin_timings,aes(x = bin, y = value, fill = "#A7D9CB"))+
