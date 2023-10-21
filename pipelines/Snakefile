@@ -20,15 +20,15 @@ rule all:
         ),
         expand(
             join(config["OUTPUT_PATH"], "{tools}", "fitting_{ncores}_{trials}.txt"),
-                tools = ["PyTom", "PyTomModule", "STOPGAP"],
-                ncores = [1, 2, 4, 8],
-                trials = [0, 1, 2]
+                tools = ["Powerfit", "Situs"],
+                ncores = config["NCORES"],
+                trials = config["TRIALS"],
         ),
         expand(
             join(config["OUTPUT_PATH"], "{tools}", "tomogram_{ncores}_{trials}_{order}.txt"),
                 tools = ["OursNoPadding"],
                 ncores =config["NCORES"],
-                trials = [0, 1, 2],
+                trials = config["TRIALS"],
                 order=[3]
         ),
         expand(
@@ -36,7 +36,7 @@ rule all:
                 tools = ["Ours"],
                 orders = [-1],
                 ncores = config["NCORES"],
-                trials = [0, 1, 2]
+                trials = config["TRIALS"]
         ),
 
 
@@ -49,13 +49,13 @@ structure_density = Density.from_structure(
 )
 FITTING_RAM = {str(int(cores)) : estimate_ram_usage(
     electron_density.shape, structure_density.shape,
-    matching_method = "CORR", ncores = cores) for cores in config["NCORES"]}
+    matching_method = "FLC", ncores = cores) for cores in config["NCORES"]}
 
 electron_density = Density.from_file(config["TOMOGRAM_PATH"])
 structure_density = Density.from_file(config["TOMOGRAM_TEMPLATE"])
 MATCHING_RAM = {str(int(cores)) : estimate_ram_usage(
     np.add(electron_density.shape, structure_density.shape,),
-    structure_density.shape, matching_method = "CORR", ncores = cores
+    structure_density.shape, matching_method = "FLC", ncores = cores
     ) for cores in config["NCORES"]
 }
 
@@ -248,10 +248,10 @@ rule ourTomoNoPadding:
         echo {resources.avg_mem} >> {output}
         """
 
-
+# Different map to avoid cropping by Situs
 rule Situs:
     input:
-        target = config["MAP_PATH_PADDED"],
+        target = config["MAP_PATH_SITUS"],
         template = config["MAP_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "Situs", "fitting_{ncores}_{trial}.txt")
@@ -279,6 +279,7 @@ rule Situs:
             -res {params.map_resolution} \
             -deg {params.angular_sampling} \
             -sizef 0 \
+            -cutoff -10000 \
             -nopowell \
             -nprocs {params.ncores} 2> {output}
 
@@ -287,7 +288,7 @@ rule Situs:
 
 rule Powerfit:
     input:
-        target = config["MAP_PATH_PADDED"],
+        target = config["MAP_PATH"],
         template = config["MAP_TEMPLATE"],
     output:
         join(config["OUTPUT_PATH"], "Powerfit", "fitting_{ncores}_{trial}.txt")
@@ -357,11 +358,11 @@ rule our:
         /usr/bin/time -v match_template.py \
             -m {input.target} \
             -i {input.template} \
-            --cutoff_target {params.map_cutoff} \
             --cutoff_template 0 \
             -s CORR \
             -n {params.ncores} \
             --no_edge_padding \
+            --no_fourier_padding \
             --interpolation_order {params.order} \
             -r 1000000000000000 \
             -a {params.angular_sampling} 2> {output}

@@ -65,9 +65,12 @@ plots = lapply(c("tomogram", "fitting"), function(method){
   if(method == "tomogram"){
     timings[method == "OursNoPadding", method := "pyTME"]
   }else{
-    timings[method == "Ours", method := "pyTME"]
+    timings = timings[method %in% c("OursNoPadTarget", "SitusNoPadTarget", "PowerfitNoPadTarget")]
+    timings[method == "OursNoPadTarget", method := "pyTME"]
+    timings[method == "SitusNoPadTarget", method := "Situs"]
+    timings[method == "PowerfitNoPadTarget", method := "PowerFit"]
+    timings = timings[method == "Powerfit", method := "PowerFit"]
   }
-  timings = timings[method == "Powerfit", method := "PowerFit"]
   
   timings = timings[method %in% names(method_colors)]
   timings = timings[ncores <= 32]
@@ -181,7 +184,9 @@ bin_timings = data.table(
     1319.74,1329.30,1332.75,
     162.29,163.53,163.74,
     30.56,30.82,32.46
-  )
+  ),
+  type = "NVIDIA A100"
+  
 )
 bin_timings_multi = data.table(
   bin = c(
@@ -190,26 +195,33 @@ bin_timings_multi = data.table(
     4,4,4,
     8,8,8),
   value = c(
-    0,0,0,
-    2038.43,2036.49,2035.41,
-    260.01,259.03,258.97,
-    52.66,0,0
-  )
+    11911.333,11755.963,11723.836,
+    1228.773,1229.381,1186.173,
+    173.460,168.997,168.953,
+    41.855,36.241,59.284
+  ),
+  type = "2 NVIDIA RTX 3090"
 )
+bin_timings = rbind(bin_timings, bin_timings_multi)
 bin_timings[, value := value / 3600]
-timings_mean = bin_timings[, mean(value), by = .(bin)]
-bin_timings_lots = ggplot(bin_timings,aes(x = bin, y = value, fill = "#A7D9CB"))+
-    geom_line(data = timings_mean, mapping = aes(x = bin, y = V1), linewidth = 2, color = "#A7D9CB")+
-    geom_point(size = 4, shape = 21, color = "#000000", alpha= .7, fill = "#A7D9CB")+
+timings_mean = bin_timings[, mean(value), by = .(bin, type)]
+bin_timings_lots = ggplot(bin_timings,aes(x = bin, y = value, fill = type, color = type))+
+    geom_line(data = timings_mean, mapping = aes(x = bin, y = V1), linewidth = 2)+
+    geom_point(size = 4, shape = 21, color = "#000000", alpha= .7)+
     theme_bw(base_size = FONT_SIZE)+
-    scale_color_manual(name = "Tool", values = method_colors)+
-    scale_fill_manual(name = "Tool", values = method_colors)+
+    scale_color_manual(name = "Hardware",
+                       values = c(`NVIDIA A100` = "#A7D9CB", `2 NVIDIA RTX 3090` = "#2188c9")
+    )+
+    scale_fill_manual(name = "Hardware", 
+                      values = c(`NVIDIA A100` = "#A7D9CB", `2 NVIDIA RTX 3090` = "#2188c9")
+    )+
     ylab("Runtime [hours : minutes]")+
     xlab("Binning")+
     scale_y_continuous(
       trans = "log10",
       labels = format_labels,
-      breaks = sort(unique(timings_mean$V1)),
+      # breaks = sort(unique(timings_mean$V1)),
+      n.breaks = 10,
       limits = c(
         1 * min(bin_timings$value), 
         1.3 * max(bin_timings$value)

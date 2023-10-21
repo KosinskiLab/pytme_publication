@@ -13,6 +13,7 @@ STOPGAP_ROOTDIR: "/scratch/vmaurer/templateMatchingLibrary/data/stopgapBase"
 
 MAP_PATH: "/scratch/vmaurer/templateMatchingLibrary/data/emd_8621.mrc"
 MAP_PATH_PADDED: "/scratch/vmaurer/templateMatchingLibrary/data/emd_8621_padded.mrc"
+MAP_PATH_SITUS: "/scratch/vmaurer/templateMatchingLibrary/data/emd_8621_shift.mrc"
 MAP_TEMPLATE: "/scratch/vmaurer/templateMatchingLibrary/data/5uz4.cif"
 MAP_CUTOFF: 0.0309
 MAP_RESOLUTION: 5.8

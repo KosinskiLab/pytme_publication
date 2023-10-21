@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH --mem 150G
+#SBATCH --mem 170G
 #SBATCH -p gpu-el8
 #SBATCH -N 1
-#SBATCH -t 2:00:00
+#SBATCH -t 10:00:00
 #SBATCH -C gpu=3090
+#SBATCH --cpus-per-task=6
 #$BATCH --qos=highest
 #SBATCH --gres=gpu:2
 #SBATCH --export=NONE
@@ -26,7 +27,8 @@ ANGULAR_SAMPLING=15
     --use_gpu \
     -a $ANGULAR_SAMPLING \
     --no_edge_padding \
+	-r 30000000000 \
     --no_fourier_padding \
-	--use_mixed_precision \
-	--use_memmap \
-    -o bin1.pickle
+    --use_mixed_precision \
+    --use_memmap \
+    -o /scratch/vmaurer/temp/bin1.pickle
