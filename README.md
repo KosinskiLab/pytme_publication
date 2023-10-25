@@ -1,7 +1,7 @@
 # pyTME illustration and benchmarks
 
 The code and data in this repository were used in the following publication:
-- [Python Template Matching Engine): A fast, flexible, and multi-purpose template matching library for cryogenic electron microscopy data](Update Link Here)
+- [Python Template Matching Engine): A fast, flexible, and multi-purpose template matching library for cryogenic electron microscopy data](https://www.biorxiv.org/content/10.1101/2023.10.23.563472v1)
 
 ## Contents
 
